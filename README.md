@@ -40,4 +40,3 @@ Official Lua versions can also be used as long as the Makefile is edited.
 
 * Read Wiki for documents https://github.com/cloudwu/skynet/wiki
 * The FAQ in wiki https://github.com/cloudwu/skynet/wiki/FAQ
-111
