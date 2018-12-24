@@ -9,6 +9,16 @@ local CardUtil = require("util.CardUtil");
 
 local tasklet  = require("tasklet");
 
+local oldPrint  = print;
+local tid = nil;
+print = function( ... )
+    if tid then
+        oldPrint("桌子id " .. tid, ...)
+    else
+        oldPrint(...)
+    end
+   
+end
 
 
 local GameLogic = {}
@@ -22,6 +32,8 @@ function GameLogic:ctor(delegate)
     self.delegate = delegate;
 
     self.delayTime = 1;
+
+    tid = delegate.tid;
     -- self.send = delegate.send;
 
     -- self.broadcast = delegate.broadcast
@@ -35,17 +47,18 @@ function GameLogic:startGame(players)
 
     self.players = players or self.delegate.players;
     local seed = (tostring(os.time()):reverse():sub(1, 7))
-    dump(seed,"seed")
-    math.randomseed(seed)
+    print(seed,"seed")
+    math.randomseed(seed)--"8905465"
     math.random();
     math.random()
 
     self:dealCards();
     self:startGound();
+    -- 8905465
 end
 
 function GameLogic:gameOver()
-    dump("游戏结束");
+    print("游戏结束");
     self.cardList = {};
     self:broadcast(CMD.broadcastGameOver,{msg = "游戏结束"})
 
@@ -70,7 +83,7 @@ function GameLogic:check(outCard,myCard)
     elseif outCard.cardValue == myCard.cardValue  then
         return true;
     else
-        if outCard.cardValue == 11 then  --加2
+        if outCard.cardValue == 11 or outCard.cardValue == 15 then  --加2 或者加4
             return false;
         elseif outCard.cardType == myCard.cardType then -- 同花色
             return true;
@@ -221,7 +234,7 @@ function GameLogic:startGound()
             end
             
             if outCard == nil then
-                dump("游戏开始");
+                print("游戏开始");
                 local player = Players[self.index];
                 local outCardIndex = nil
                 self:broadcast(CMD.isUserTurn,{seat = self.index,id = player.id})
@@ -256,7 +269,7 @@ function GameLogic:startGound()
                 self:broadcast(CMD.isUserTurn,{seat = self.index,id = player.id})
                 if player.isAI == false then --非机器人 阻塞
                     local outCardIndex = self:outCardByAI(player,outCard)
-                    dump("轮到用户出牌",outCardIndex)
+                    print("轮到用户出牌",outCardIndex)
                     if outCardIndex  then
                         self:send(CMD.isUserTurn,{seat = self.index,id = player.id},player);
                         outCardIndex = tasklet.yield();
@@ -266,6 +279,7 @@ function GameLogic:startGound()
                     end
                 else -- 机器人 进行AI出牌
                     tasklet.sleep(math.random(1,3));
+                    -- tasklet.sleep(0.1);
                     local outCardIndex = self:outCardByAI(player,outCard)
                     if outCardIndex then
                         nextOutCard = table.remove(player.cards,outCardIndex);
