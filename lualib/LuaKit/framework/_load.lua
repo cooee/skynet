@@ -67,13 +67,7 @@ function framework:load(root)
     -- print("global " .. nums(globals))
     local StringLib = require(root .. "framework.lib.StringLib");
 
-    local Base64 = require(root .. "framework.lib.Base64")
-    local M = {};
-    M.Base64 = Base64;
-    framework:mergeToGlobal(M)
-
     require(root .. "framework.core.object");
-
 
     
     local TableLib = require(root .. "framework.lib.TableLib");
@@ -112,8 +106,6 @@ function framework:load(root)
     -- local M = {};
     -- M.DataTracker = DataTracker;
     -- framework:mergeToGlobal(M);
-
-    require(root .. "framework.tools.profiler");
 
     -- framework:mergeToGlobal(M)
 
