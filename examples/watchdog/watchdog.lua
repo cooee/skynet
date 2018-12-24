@@ -6,8 +6,9 @@ local gate
 local agent = {}
 
 function SOCKET.open(fd, addr)
-	skynet.error("New client from : " .. addr)
+	print("New client from : " .. addr)
 	agent[fd] = skynet.newservice("agent")
+	---执行 agent start
 	skynet.call(agent[fd], "lua", "start", { gate = gate, client = fd, watchdog = skynet.self() })
 end
 
@@ -17,7 +18,9 @@ local function close_agent(fd)
 	if a then
 		skynet.call(gate, "lua", "kick", fd)
 		-- disconnect never return
-		skynet.send(a, "lua", "disconnect")
+		skynet.send(a, "lua", "disconnect",fd)
+
+		print("socket close2",fd)
 	end
 end
 
@@ -39,8 +42,12 @@ end
 function SOCKET.data(fd, msg)
 end
 
+---由main调用触发过来 
 function CMD.start(conf)
+	print("watchdog.lua CMD.start")
+	-- print("watchdog.lua CMD.start")
 	skynet.call(gate, "lua", "open" , conf)
+	-- dump(fonf)
 end
 
 function CMD.close(fd)
@@ -49,6 +56,7 @@ end
 
 skynet.start(function()
 	skynet.dispatch("lua", function(session, source, cmd, subcmd, ...)
+		print("watchdog cmd",cmd,subcmd)
 		if cmd == "socket" then
 			local f = SOCKET[subcmd]
 			f(...)
@@ -58,6 +66,8 @@ skynet.start(function()
 			skynet.ret(skynet.pack(f(subcmd, ...)))
 		end
 	end)
-
-	gate = skynet.newservice("gate")
+	-- skynet.trace()
+	print("watchdog 启动 mygate")
+	print("watchdog ",skynet.self());
+	gate = skynet.newservice("mygate")
 end)
