@@ -51,6 +51,8 @@ require "alien"
 require "alien.struct"
 local struct = alien.struct
 
+local CMD = require("cmd");
+
 local GameSocket = new(BaseSocket)
 
 --[[--
@@ -79,6 +81,11 @@ end
 
 function GameSocket:onRecv(cmd,data)
 	dump(data,cmd)
+	if CMD.loginSuccess == cmd then
+		self:sendMsg(CMD.enterRoom,{uid = data.uid});
+		
+		self:sendMsg(CMD.userRequestStartGame,{uid = data.uid});
+	end
 end
 
 GameSocket:addBodyReader(GameReader);
@@ -87,12 +94,8 @@ GameSocket:addBodyWriter(GameWriter)
 
 
 
-local CMD = require("cmd");
 
 GameSocket:connect(host, port,function(sock)
-	sock:sendMsg(CMD.enterRoom,{msg = "进桌"})
+	sock:sendMsg(CMD.login,{token = "myc"});
 	dump("连接成功")
-
-	sock:sendMsg(CMD.userRequestStartGame,{uid = os.time()});
-	
 end)

@@ -10,7 +10,7 @@ local WATCHDOG
 local host
 local send_request
 
-local CMD = {}
+local Agent = {}
 
 local client_fd
 
@@ -25,10 +25,14 @@ local function send_package(cmd,data)
 end
 
 
-local MSG = {}
-function MSG:onRecv(fd,cmd,data)
-	print(fd,data,cmd)
-	skynet.send("TableManager", "lua", "onRecv",fd,cmd,data)
+
+function Agent.onRecv(fd,cmd,data)
+	dump(data,cmd)
+	if cmd == 101 then
+		skynet.send("LoginService", "lua", "login",fd,cmd,data)
+	else
+		skynet.send("TableManager", "lua", "onRecv",fd,cmd,data)
+	end
 end
 
 ---主动关闭连接
@@ -56,32 +60,24 @@ skynet.register_protocol {
 		assert(fd == client_fd)	-- You can use fd to reply message
 		skynet.ignoreret()	-- session is fd, don't call skynet.ret
 		-- skynet.trace()
-		MSG:onRecv(fd,cmd, ...)
+		Agent.onRecv(fd,cmd, ...)
 		return fd, _, cmd, ...
 	end
 }
 
-function CMD.start(conf)
+function Agent.start(conf)
 	--- watchdog 调用过来
 	local fd = conf.client
 	local gate = conf.gate
 	WATCHDOG = conf.watchdog
 
-
-	---发送心跳
-	-- skynet.fork(function()
-	-- 	while true do
-	-- 		send_package("heartbeat")
-	-- 		skynet.sleep(500)
-	-- 	end
-	-- end)
 	client_fd = fd
 
 	--调用网关 gate forward 向前 打开 fd socket
 	skynet.call(gate, "lua", "forward", fd)
 end
 
-function CMD.disconnect(fd)
+function Agent.disconnect(fd)
 	-- todo: do something before exit
 	print("agent.lua disconnect")
 	skynet.call("TableManager", "lua", "user_disconnect", client_fd)
@@ -92,7 +88,7 @@ end
 
 skynet.start(function()
 	skynet.dispatch("lua", function(_,_, command, ...)
-		local f = CMD[command]
+		local f = Agent[command]
 		skynet.ret(skynet.pack(f(...)))
 	end)
 end)

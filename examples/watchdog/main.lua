@@ -19,7 +19,9 @@ skynet.start(function()
 		maxTableNum = 100,
 	})
 
-	dumpToFile("myc_test", {a = 2})
+	local LoginService = skynet.newservice("LoginService")
+	skynet.call(LoginService, "lua", "start", {
+	})
 
 	skynet.exit()
 	print("main exit")
