@@ -4,15 +4,28 @@
 
 Date   2018-12-6
 Last Modified by   YuchengMo
-Last Modified time 2018-12-18 17:01:19
+Last Modified time 2018-12-25 15:01:30
 ]]
-local CardUtil = class();
+
+-- require("LuaKit._load")
+local CardUtil = {};
 
 
 
-
+-- cards =
+-- {
+-- 79,78,11,4,5,6,7,8,
+-- 9,10,3,12,13,17,18,19,
+-- 20,21,22,23,24,25,26,27,28,
+-- 29,33,34,35,36, 37,38,39,40,
+-- 41, 42, 43,44,45,49,50,51,52,53,54,
+-- 55,56,57,58,59,60,61,78,79,
+-- 78,79,78,79,1,2,
+-- }
 
 local bit = require("bit32");
+
+-- local bit = require("bit");
 
 function CardUtil.getAllCards()
 	local cards = {}
@@ -29,7 +42,7 @@ function CardUtil.getAllCards()
 		table.insert(cards, 0x4f);
 	end
 
-
+	dumpToFile("cards", cards)
 	local cardInfos = {};
 
 	for i, cardByte in ipairs(cards) do
@@ -37,7 +50,7 @@ function CardUtil.getAllCards()
 		cardInfos[i] = temp;
 	end
 
-
+	dumpToFile("cardInfos",cardInfos)
 	return cardInfos;
 end
 
@@ -61,10 +74,7 @@ function CardUtil.getCardInfo(cardByte)
 	elseif cardByte == 0x4f then
 		cardInfo.res = "jia4"
 	end
-	
-	-- local Log = import("bos.framework.logt")
 	return cardInfo;
 end
-
 
 return CardUtil;

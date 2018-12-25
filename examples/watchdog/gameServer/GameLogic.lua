@@ -48,7 +48,7 @@ function GameLogic:startGame(players)
     self.players = players or self.delegate.players;
     local seed = (tostring(os.time()):reverse():sub(1, 7))
     print(seed,"seed")
-    math.randomseed(seed)--"8905465"
+    math.randomseed(seed)--"8905465","6113275"
     math.random();
     math.random()
 
@@ -83,7 +83,8 @@ function GameLogic:check(outCard,myCard)
     elseif outCard.cardValue == myCard.cardValue  then
         return true;
     else
-        if outCard.cardValue == 11 or outCard.cardValue == 15 then  --加2 或者加4
+        --如果是加2或者加4 并且没有使用过技能
+        if (outCard.cardValue == 11 or outCard.cardValue == 15) and not outCard.useSkill then  --加2 或者加4
             return false;
         elseif outCard.cardType == myCard.cardType then -- 同花色
             return true;
@@ -98,11 +99,11 @@ function GameLogic:getOffset(card,offset)
     if math.abs(offset) >= 2 then
         offset = math.ceil(offset / 2)
     end
-    if card.cardValue == 12 and card.flag == nil then --转向
-        card.flag = true;
+    if card.cardValue == 12 and card.useSkill == nil then --转向
+        card.useSkill = true;
         return offset * -1;
-    elseif card.cardValue == 13 and card.flag == nil then -- 禁牌
-        card.flag = true;
+    elseif card.cardValue == 13 and card.useSkill == nil then -- 禁牌
+        card.useSkill = true;
         return offset * 2;
     else
         return offset;
@@ -141,9 +142,14 @@ function GameLogic:dealOutCard(outCard,record,index,task)
     
     local player = self.players[index];
 
-    if outCard.cardValue == 11 then --加 2 
+    if outCard.seat == nil then -- 记录座位号
+        outCard.seat  = index;
+    end
+
+    --- useSkill = true; 表示使用过能力，比如加2 加4
+    if outCard.cardValue == 11 and outCard.useSkill == nil then --加 2 
         record.addCards = record.addCards + 2;
-    elseif outCard.cardValue == 15 then
+    elseif outCard.cardValue == 15 and outCard.useSkill == nil then
         record.addCards = record.addCards + 4;
         if player.isAI == false then
             outCard.cardType = tasklet.yield()
@@ -151,8 +157,8 @@ function GameLogic:dealOutCard(outCard,record,index,task)
             outCard.cardType  = math.random(0, 3);
         end 
         self:broadcast(CMD.broadcastAISelectColor,{seat = index,cardType = outCard.cardType})
-    elseif outCard.cardValue == 14 then --变牌
-        outCard.cardValue = -1;
+    elseif outCard.cardValue == 14 and outCard.useSkill == nil then --变牌
+        outCard.useSkill = true;
         if player.isAI == false then
             outCard.cardType = tasklet.yield()
         else
@@ -179,8 +185,37 @@ function GameLogic:onUserDisconnect(fd)
     end
 end
 
+function GameLogic:onUserReconnect(fd)
+    local player = self:getPlayerByID(fd);
+    player.isAI = false; -- 托管
+    print("用户 重连")
 
+    local cards = {};
+    for k,v in ipairs(player.cards) do
+        table.insert(cards,v.cardByte);
+    end
 
+    local otherUserCards = {};
+    for i,v in ipairs(self.players) do
+        if v.id ~= player.id then
+            local data = {}
+            data.seat = v.seat;
+            data.cardNum = #v.cards;
+            table.insert(otherUserCards,data);
+        end
+    end
+
+    local outCard = {seat = self.outCard.seat,card = self.outCard.cardByte,cardType = self.outCard.cardType};
+
+    self:send(CMD.reConnectSuccess,{cards = cards,turnUserSeat = self.index,seat = player.seat,id = player.id,
+        otherUserCards = otherUserCards,outCard = outCard,tid = tid,
+    },player);
+
+    if player.seat == self.index then
+        print("假恢复协程")
+        -- tasklet.resume(self.task,nil)
+    end
+end
 
 function GameLogic:onUserOutCard(fd,cmd,data)
     local id = fd;
@@ -222,6 +257,8 @@ function GameLogic:startGound()
     local allOutCards = {};
     
     self.index = math.random(1,8)
+
+    -- self.index = 1
     self.outCard = nil;
     
     local task = tasklet.spawn(function(...)
@@ -266,8 +303,16 @@ function GameLogic:startGound()
                 local player = Players[self.index]; --获取当前操作玩家
                 local nextOutCard = nil
 
-                self:broadcast(CMD.isUserTurn,{seat = self.index,id = player.id})
+                
+                if player.isAI == true then --玩家托管也是机器人 所以需要前置处理 这样重连的时候 睡眠醒来 可以继续到用户操作
+                    self:broadcast(CMD.isUserTurn,{seat = self.index,id = player.id})
+                    tasklet.sleep(math.random(1,3));
+                    -- tasklet.sleep(0.1);
+                end
+
+
                 if player.isAI == false then --非机器人 阻塞
+                    self:broadcast(CMD.isUserTurn,{seat = self.index,id = player.id})
                     local outCardIndex = self:outCardByAI(player,outCard)
                     print("轮到用户出牌",outCardIndex)
                     if outCardIndex  then
@@ -278,8 +323,6 @@ function GameLogic:startGound()
                         end 
                     end
                 else -- 机器人 进行AI出牌
-                    tasklet.sleep(math.random(1,3));
-                    -- tasklet.sleep(0.1);
                     local outCardIndex = self:outCardByAI(player,outCard)
                     if outCardIndex then
                         nextOutCard = table.remove(player.cards,outCardIndex);
@@ -287,8 +330,8 @@ function GameLogic:startGound()
                 end
                 
                 if nextOutCard == nil then --不能出牌，抓牌
-                    if outCard.cardValue == 15 or outCard.cardValue == 11 then --重置牌值 处理加4 加 2情况
-                        outCard.cardValue = -1; -- 没有值
+                    if outCard.cardValue == 11 or outCard.cardValue == 15 then
+                        outCard.useSkill = true;
                     end
                     self:onPlayerPass(record,allOutCards) --玩家不出牌
                 else
@@ -353,7 +396,7 @@ end
 
 function GameLogic:outCardByAI(player,outCard)
 
-    if #player.cards ==1 then
+    if #player.cards == 1 then
         --todo
         local v = player.cards[1];
         if v.cardValue > 10 then -- 最好一张不能出功能牌
@@ -361,17 +404,19 @@ function GameLogic:outCardByAI(player,outCard)
         end
     end
 
-    if outCard.cardValue == -1 then --变色牌。没有值，只能出相同的类型
+    -- if outCard.cardValue == -1 then --变色牌。没有值，只能出相同的类型
+    --     for i,v in ipairs(player.cards) do
+    --         if v.cardType == outCard.cardType then
+    --             return i;
+    --         elseif v.cardType == 4 then
+    --             return i;
+    --         end
+    --     end
+   if outCard.cardValue == 11 or outCard.cardValue == 15 then --加 2 --加4
         for i,v in ipairs(player.cards) do
-            if v.cardType == outCard.cardType then
-                return i;
-            elseif v.cardType == 4 then
-                return i;
-            end
-        end
-    elseif outCard.cardValue == 11 or outCard.cardValue == 15 then --加 2 --加4
-        for i,v in ipairs(player.cards) do
-            if v.cardValue == outCard.cardValue then
+            if outCard.useSkill == true and v.cardType == outCard.cardType then
+               return i;
+            elseif v.cardValue == outCard.cardValue then
                 return i;
             elseif v.cardValue == 15 then
                 return i;

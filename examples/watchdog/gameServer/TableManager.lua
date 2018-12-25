@@ -31,11 +31,11 @@ function TableManager:user_disconnect(fd)
 end
 
 function TableManager:onRecv(fd,cmd,data)
-    print("TableManager onRecv",fd,cmd,data)
+    -- print("TableManager onRecv",fd,cmd,data)
     if cmd == CMD.enterRoom then -- 请求进桌
         -- skynet.call("TableManager", "lua", "allocTable", {fd = fd,data = data})
-        print("请求进桌",fd)
-        self:allocTable(fd)
+        local uid = data.uid;
+        self:allocTable(fd,uid)
     else
         for i,v in ipairs(tabelList) do
             local ret = skynet.call(v, "lua", "onRecv", fd,cmd,data)
@@ -48,21 +48,20 @@ end
 
 ---分配桌子
 function TableManager:allocTable(fd,uid)
-    local fd = fd;
     if #tabelList > maxTableNum then
         return false;
     end
-
     local flag = false;
     for i,t in ipairs(tabelList) do
-        local status = skynet.call(t, "lua", "getTableStatus", fd)
-        if status == 1 then -- 没人 
-            skynet.call(t, "lua", "addUser", fd)
-            dump(fd,"addUser")
+        local status = skynet.call(t, "lua", "getTableStatus", uid)
+        if status == 1 then -- 没人
+            dump(uid,"addUser") 
+            skynet.call(t, "lua", "addUser",fd, uid)
             flag = true;
             break;
         elseif status == 2 then --在桌子里
-            skynet.call(t, "lua", "reEnter", fd)
+            dump(uid,"reEnter")
+            skynet.call(t, "lua", "reEnter",fd, uid)
             flag = true;
             break;
         end
@@ -71,6 +70,7 @@ function TableManager:allocTable(fd,uid)
     if flag == false then
         local t = TableManager.newTable()
         if t then
+            dump(uid,"addUser2") 
             skynet.call(t, "lua", "addUser", fd,uid)
         end   
     end
@@ -109,7 +109,6 @@ end
 skynet.start(function()
     skynet.dispatch("lua", function(session, address, cmd, ...)
         local f = TableManager[cmd]
-        dump({...})
         if f then
             skynet.ret(skynet.pack(f(TableManager,...)))
         end

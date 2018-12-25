@@ -1,7 +1,7 @@
 -- @Author: 莫玉成
 -- @Date:   2018-12-18 11:35:50
 -- @Last Modified by   YuchengMo
--- @Last Modified time 2018-12-19 15:38:39
+-- @Last Modified time 2018-12-25 10:43:02
 
 
 local CMD = {}
@@ -16,6 +16,7 @@ CMD.chat = 1001;
 
 CMD.enterRoom = 10001;
 CMD.enterRoomSuccess = 10002; --自己进入房间成功
+CMD.reConnectSuccess = 10004; --自己重连成功
 
 CMD.dealCard = 10010;        --  发牌
 

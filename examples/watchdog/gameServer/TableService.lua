@@ -37,9 +37,9 @@ function TableService:start(conf)
     self.gameLogic = new(GameLogic,self);
 end
 
-function TableService:getTableStatus(fd)
+function TableService:getTableStatus(uid)
     for i,v in ipairs(self.players) do
-        if v.id == fd then
+        if v.uid == uid then
             return 2; -- 已经在房间
         end
     end
@@ -50,16 +50,17 @@ function TableService:getTableStatus(fd)
     end
 end
 
-function TableService:addUser(fd)
+function TableService:addUser(fd,uid)
 
     local mySeat = #self.players + 1;
     local player = new(Player);
     player.isAI  = false;
     player.id    = fd;
+    player.uid   = uid;
     player.seat  = mySeat;
     table.insert(self.players,player)
 
-    self:send(CMD.enterRoomSuccess,{seat = mySeat,id = player.id,tid = self.tid},player);
+    self:send(CMD.enterRoomSuccess,{seat = mySeat,id = player.id,tid = self.tid,uid = uid},player);
 
     if #self.players == tableConfig.maxPlayer then
         self:startGame();
@@ -128,15 +129,22 @@ function TableService:addAI()
         local player = new(Player);
         player.isAI  = true;
         player.id    = -1;
+        player.uid   = -1;
         player.seat  =  i;
         table.insert(self.players,player)
     end
 end
 
 ---从进
-function TableService:reEnter(fd)
-    -- table.insert(userList,fd);
-    -- dump(userList);
+function TableService:reEnter(fd,uid)
+    for i,v in ipairs(self.players) do
+        if v.uid == uid then
+            v.id = fd;
+        end
+    end
+    if self.isPlaying == true then 
+       self.gameLogic:onUserReconnect(fd);
+    end
 end
 
 function TableService:disconnect()
