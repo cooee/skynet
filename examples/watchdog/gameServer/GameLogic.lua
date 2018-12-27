@@ -212,8 +212,13 @@ function GameLogic:onUserReconnect(fd)
     },player);
 
     if player.seat == self.index then
-        print("假恢复协程")
-        -- tasklet.resume(self.task,nil)
+        print("假恢复协程222222222")
+        if self.task.action and self.task.action.tag == player.uid then
+            dump(self.task)
+            tasklet.resume(self.task,nil)
+        end
+       
+
     end
 end
 
@@ -258,7 +263,7 @@ function GameLogic:startGound()
     
     self.index = math.random(1,8)
 
-    -- self.index = 1
+    self.index = 8
     self.outCard = nil;
     
     local task = tasklet.spawn(function(...)
@@ -280,6 +285,7 @@ function GameLogic:startGound()
                     outCardIndex = tasklet.yield();
                     outCard = table.remove(player.cards,outCardIndex);
                 else
+                    tasklet.sleep(math.random(2,4),player.uid);
                     outCard = table.remove(player.cards,1);
                 end
                 self.outCard = outCard;         
@@ -306,7 +312,7 @@ function GameLogic:startGound()
                 
                 if player.isAI == true then --玩家托管也是机器人 所以需要前置处理 这样重连的时候 睡眠醒来 可以继续到用户操作
                     self:broadcast(CMD.isUserTurn,{seat = self.index,id = player.id})
-                    tasklet.sleep(math.random(1,3));
+                    tasklet.sleep(math.random(2,4),player.uid);
                     -- tasklet.sleep(0.1);
                 end
 

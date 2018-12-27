@@ -1,14 +1,24 @@
 -- @Author: 莫玉成
 -- @Date:   2018-12-03 17:41:18
 -- @Last Modified by   YuchengMo
--- @Last Modified time 2018-12-20 18:11:22
+-- @Last Modified time 2018-12-27 11:43:02
 
 local skynet = require "skynet"
 
 local coroutine = require "skynet.coroutine"
 
-
-local Clock = skynet;
+function cancelable_timeout(ti, func)
+    local function cb()
+        if func then
+            func()
+        end
+    end
+    local function cancel()
+        func = nil
+    end
+    skynet.timeout(ti, cb)
+    return cancel
+end
 
 local M = {}
 
@@ -55,26 +65,38 @@ end
 -- 恢复微线程。
 -- @function [parent=#tasklet] resume
 function M.resume(task,...)
+    if task.action and  task.action.cancel and task.action.__sleep__ then
+        task.action:cancel()
+    end
     resume_task(task, ...)
 end
+
 
 function M.yield(...)
     return coroutine.yield(...)
 end
 
-
 ---
 -- 在微线程中执行，暂停 n 秒
 -- @function [parent=#tasklet] sleep
 -- @param #number n
-function M.sleep(n)
-    return coroutine.yield(setmetatable({
-        }, {
-            __call = function(self, callback)
-                Clock.sleep(n*100) -- 1/100
-                callback();
+function M.sleep(n,tag)
+    local action = {
+        cancel = function(self)
+            if self._handler then
+                self.__sleep__ = nil;
+                self._handler()
             end
-        }))
+        end,
+        tag = tag,
+    }
+    setmetatable(action, {
+        __call = function(self, callback)
+            self.__sleep__ = n;
+            self._handler = cancelable_timeout(n*100,callback);
+        end
+    })
+    return coroutine.yield(action)
 end
 
 return M
