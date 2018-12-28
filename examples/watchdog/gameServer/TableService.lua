@@ -62,6 +62,15 @@ function TableService:addUser(fd,uid)
 
     self:send(CMD.enterRoomSuccess,{seat = mySeat,id = player.id,tid = self.tid,uid = uid},player);
 
+    local list = {};
+    for i,v in ipairs(self.players) do
+        local data = {}
+        data.uid = v.uid;
+        data.seat = v.seat;
+        table.insert(list,data);
+    end
+    self:broadcast(CMD.broadcastEnterRoomSuccess,list)
+
     if #self.players == tableConfig.maxPlayer then
         self:startGame();
     end
@@ -133,6 +142,16 @@ function TableService:addAI()
         player.seat  =  i;
         table.insert(self.players,player)
     end
+
+    local list = {};
+    for i,v in ipairs(self.players) do
+        local data = {}
+        data.uid = v.uid;
+        data.seat = v.seat;
+        table.insert(list,data);
+    end
+    self:broadcast(CMD.broadcastEnterRoomSuccess,list)
+
 end
 
 ---从进

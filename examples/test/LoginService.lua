@@ -1,7 +1,7 @@
 -- @Author: 莫玉成
 -- @Date:   2018-12-25 09:36:03
 -- @Last Modified by   YuchengMo
--- @Last Modified time 2018-12-27 14:11:22
+-- @Last Modified time 2018-12-27 15:20:53
 
 
 local skynet = require "skynet"
@@ -41,7 +41,7 @@ function LoginService:login(fd,cmd,data)
 	end
 	SocketUtil.sendMsg(CMD.loginSuccess,user,fd);
 
-	dump(self.users,"userMap")
+	dump(self.users,"userMap2")
 
 end
 ---分配提个ID
