@@ -5,7 +5,13 @@ local cluster = require "skynet.cluster"
 require("LuaKit._load");
 
 local proxy
-
+local getProxy = function( ... )
+	cluster.reload {
+		ClusterCenter = "47.106.87.33:9720",
+	}
+	local proxy = cluster.proxy "ClusterCenter@ClusterCenter"	-- cluster.proxy("db", "@sdb")
+	return proxy
+end
 
 local CMD = {};
 ---由main调用触发过来 
@@ -16,6 +22,7 @@ function CMD.start(conf)
 	-- print(cluster.call("ClusterCenter", "@ClusterCenter", "get", "a"))
 
 	-- skynet.trace("cluster")
+	local proxy = getProxy();
 	local data = skynet.call(proxy, "lua", "getClusterNode", "db")
 	if data then
 		dump(data);
@@ -35,12 +42,6 @@ end
 
 
 skynet.start(function()
-
-	cluster.reload {
-		ClusterCenter = "127.0.0.1:1989",
-	}
-	proxy = cluster.proxy "ClusterCenter@ClusterCenter"	-- cluster.proxy("db", "@sdb")
-
 	skynet.dispatch("lua", function(session, source, cmd, subcmd, ...)
 		local f = assert(CMD[cmd])
 		skynet.ret(skynet.pack(f(subcmd, ...)))

@@ -5,7 +5,7 @@ local snax = require "skynet.snax"
 
 local getProxy = function( ... )
 	cluster.reload {
-		ClusterCenter = "127.0.0.1:1989",
+		ClusterCenter = "47.106.87.33:9720",
 	}
 	local proxy = cluster.proxy "ClusterCenter@ClusterCenter"	-- cluster.proxy("db", "@sdb")
 	return proxy
@@ -27,7 +27,7 @@ skynet.start(function()
 
 	local port = skynet.call(proxy, "lua", "getPort", {db = "127.0.0.1:2528"});
 
-	local address = "127.0.0.1:" .. port
+	local address = "0.0.0.0:" .. port
 	print(address)
 
 	cluster.reload {

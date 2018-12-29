@@ -54,7 +54,10 @@ function CMD.close(fd)
 	close_agent(fd)
 end
 
+
+---入口 start 
 skynet.start(function()
+	---注册事件 source 来源
 	skynet.dispatch("lua", function(session, source, cmd, subcmd, ...)
 		print("watchdog cmd",cmd,subcmd)
 		if cmd == "socket" then

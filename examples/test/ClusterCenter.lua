@@ -6,7 +6,7 @@ require("LuaKit._load");
 
 local CMD = {};
 
-port = 3001;
+port = 9720;
 
 function CMD.test( ... )
 	dump({ ...})
@@ -14,6 +14,9 @@ end
 
 function CMD.getPort( ... )
 	port = port + 1;
+	if port > 9800 then
+		port = 9721;
+	end
 	return port;
 end
 
@@ -37,7 +40,7 @@ end
 
 skynet.start(function()
 	cluster.reload {
-		ClusterCenter = "127.0.0.1:1989",
+		ClusterCenter = "0.0.0.0:9720",
 	}
 	skynet.dispatch("lua", function(session, source, cmd,...)
 		local f = assert(CMD[cmd])
