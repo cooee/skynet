@@ -204,8 +204,10 @@ function GameLogic:onUserReconnect(fd)
             table.insert(otherUserCards,data);
         end
     end
-
-    local outCard = {seat = self.outCard.seat,card = self.outCard.cardByte,cardType = self.outCard.cardType};
+    local outCard
+    if self.outCard then
+        outCard = {seat = self.outCard.seat,card = self.outCard.cardByte,cardType = self.outCard.cardType};
+    end
 
     self:send(CMD.reConnectSuccess,{cards = cards,turnUserSeat = self.index,seat = player.seat,id = player.id,
         otherUserCards = otherUserCards,outCard = outCard,tid = tid,
@@ -262,8 +264,7 @@ function GameLogic:startGound()
     local allOutCards = {};
     
     self.index = math.random(1,8)
-
-    -- self.index = 8
+    -- self.index = 1
     self.outCard = nil;
     
     local task = tasklet.spawn(function(...)
@@ -281,9 +282,11 @@ function GameLogic:startGound()
                 local outCardIndex = nil
                 self:broadcast(CMD.isUserTurn,{seat = self.index,id = player.id})
                 if player.isAI == false then
+                    print("outCardIndex2",1)
                     self:send(CMD.isUserTurn,{seat = self.index,id = player.id},player);
                     outCardIndex = tasklet.yield();
                     outCard = table.remove(player.cards,outCardIndex);
+                    print("outCardIndex",outCardIndex)
                 else
                     tasklet.sleep(math.random(1,3),player.uid);
                     outCard = table.remove(player.cards,1);
@@ -312,8 +315,8 @@ function GameLogic:startGound()
                 
                 if player.isAI == true then --玩家托管也是机器人 所以需要前置处理 这样重连的时候 睡眠醒来 可以继续到用户操作
                     self:broadcast(CMD.isUserTurn,{seat = self.index,id = player.id})
-                    tasklet.sleep(math.random(1,3),player.uid);
-                    -- tasklet.sleep(0.1);
+                    -- tasklet.sleep(math.random(1,3),player.uid);
+                    tasklet.sleep(0.1);
                 end
 
                 if player.isAI == false then --非机器人 阻塞
@@ -321,6 +324,8 @@ function GameLogic:startGound()
                     print("轮到用户出牌",outCardIndex)
                     if outCardIndex  then
                         self:send(CMD.isUserTurn,{seat = self.index,id = player.id},player);
+                        print("广播用户出牌,进入等待",player.id)
+
                         outCardIndex = tasklet.yield();
                         if outCardIndex then
                             nextOutCard = table.remove(player.cards,outCardIndex);
