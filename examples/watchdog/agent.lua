@@ -14,6 +14,18 @@ local Agent = {}
 
 local client_fd
 
+function cancelable_timeout(ti, func)
+    local function cb()
+        if func then
+            func()
+        end
+    end
+    local function cancel()
+        func = nil
+    end
+    skynet.timeout(ti, cb)
+    return cancel
+end
 
 local function send_package(cmd,data)
 	local struct = string;
@@ -27,6 +39,11 @@ end
 
 
 function Agent.onRecv(fd,cmd,data)
+	
+	if cmd == 1 then
+		Agent.heartbeat();
+		return;
+	end
 	dump(data,cmd)
 	if cmd == 101 then
 		skynet.send("LoginService", "lua", "login",fd,cmd,data)
@@ -49,6 +66,10 @@ skynet.register_protocol {
         local len,cmd,position
         position = 1
         cmd,position = struct.unpack('>I4',buf,position) --获取命令字 cmd
+        if sz <= 4 then
+        	return cmd,{};
+        end
+
         local bodyBuf = string.sub(buf,5,sz)
         local data = cjson.decode(bodyBuf);
 		return cmd,data
@@ -73,7 +94,31 @@ function Agent.start(conf)
 	--调用网关 gate forward 向前 打开 fd socket
 	skynet.call(gate, "lua", "forward", fd)
 
+	-- Agent.heartbeat();
+end
 
+
+function Agent.heartbeat()
+	if Agent.handler == nil then
+		send_package(2,{});
+		Agent.handler = cancelable_timeout(1500,function( ... )
+			if Agent.recvHeartBeat == true then
+				Agent.recvHeartBeat = nil;
+				Agent.handler = nil;
+				Agent.heartbeat();
+			else
+				Agent.onHeartbeatTimeOut();
+			end	
+		end)
+	else
+		Agent.recvHeartBeat = true;
+	end
+
+end
+
+function Agent.onHeartbeatTimeOut()
+	dump("心跳超时,断开连接")
+	skynet.call(WATCHDOG, "lua", "close", client_fd)
 end
 
 
