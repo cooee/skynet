@@ -4,7 +4,7 @@ local gateserver = require "snax.gateserver"
 local watchdog
 local connection = {}	-- fd -> connection : { fd , client, agent , ip, mode }
 local forwarding = {}	-- agent -> connection
-
+require("LuaKit._load");
 skynet.register_protocol {
 	name = "client",
 	id = skynet.PTYPE_CLIENT,
@@ -92,6 +92,7 @@ function CMD.accept(source, fd)
 end
 
 function CMD.kick(source, fd)
+	close_fd(fd);
 	gateserver.closeclient(fd)
 end
 
